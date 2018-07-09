@@ -132,7 +132,7 @@ LOGGING = {
         'error': {
             'level': 'WARNING',
             'class': 'logging.FileHandler',
-            'filename': BASE_DIR + '/logs/error.log',
+            'filename': os.path.join(BASE_DIR,'error.log'),
             'formatter': 'main'
         },
     },

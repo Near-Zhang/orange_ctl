@@ -26,11 +26,11 @@ class Base_config(Baseview):
             dict = self.orange_get_dict(url)
             if dict != main_node_dict:
                 if dict['success']:
-                    msg = "Node %s divide is not updated!" %(node.ip)
+                    msg = "Node %s %s is not updated!" %(node.ip,self._plugin)
                     return self.json_response(False, msg=msg)
                 else:
                     return self.json_response(**dict)
-            return self.json_response(**dict)
+        return self.json_response(**main_node_dict)
 
 class Base_fetch_config(Baseview):
     """获取数据库中的插件相关配置内容"""
@@ -66,7 +66,7 @@ class Base_selectors(Baseview):
                     return self.json_response(False, msg=msg)
                 else:
                     return self.json_response(**dict)
-            return self.json_response(**dict)
+        return self.json_response(**main_node_dict)
 
     def post(self,request):
         """创建、删除、修改选择器，先修改数据库并更新共享字典"""
@@ -126,7 +126,7 @@ class Base_rules(Baseview):
                     return self.json_response(False, msg=msg)
                 else:
                     return self.json_response(**dict)
-            return self.json_response(**dict)
+        return self.json_response(**main_node_dict)
 
     def post(self,request):
         """创建、删除、修改指定选择器中的规则，先修改数据库并更新共享字典"""
