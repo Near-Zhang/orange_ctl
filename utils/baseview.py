@@ -18,6 +18,12 @@ class Baseview(View):
     def enable_nodes_qset(self):
         return Nodes.objects.filter(enable=1)
 
+    @property
+    def plugins_list(self):
+        plugins_url = self.compose_url('/plugins')
+        plugins_dict = self.orange_get_dict(plugins_url)
+        return list(plugins_dict['data']['plugins'])
+
     def compose_url(self, uri, port='7777', node="master"):
         if node == "master":node = Nodes.objects.filter(enable=1).first().ip
         return "http://" + node + ':' + port + uri
@@ -71,16 +77,25 @@ class Baseview(View):
                 "msg": "PUT: %s is not avaliable!" % url
             }
 
-    def orange_sync_dict(self,plugin):
-        error_dict = False
-        for node in self.enable_nodes_qset:
-            url = self.compose_url('/'+plugin+'/sync', node=node.ip)
-            dict = self.orange_post_dict(url, None)
-            if not dict['success']:
-                error_dict = dict
-        if error_dict:
-            return error_dict
+    def orange_sync_dict(self,plugin,node_ip="all"):
+        if node_ip == "all":
+            error_dict = False
+            error_node_list = []
+            for node in self.enable_nodes_qset:
+                url = self.compose_url('/'+plugin+'/sync', node=node.ip)
+                dict = self.orange_post_dict(url, None)
+                if not dict['success']:
+                    error_node_list.append(node.ip)
+            if error_dict:
+                return {
+                    "success": False,
+                    "data":error_node_list
+                }
+            else:
+                return dict
         else:
+            url = self.compose_url('/' + plugin + '/sync', node=node_ip)
+            dict = self.orange_post_dict(url, None)
             return dict
 
     def get(self,request):

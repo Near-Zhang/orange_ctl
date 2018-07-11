@@ -15,9 +15,21 @@ class nodes(Baseview):
         node_ip = request.POST.get('node')
         enable = int(request.POST.get('enable'))
         try:
-            if enable:
-                self.all_nodes_qset.filter(ip=node_ip).update(enable=1)
-                msg = "succeed to enable Node %s." %node_ip
+            if enable == 1:
+                node_ip_list = []
+                for n in self.enable_nodes_qset:
+                    node_ip_list.append(n.ip)
+                if node_ip in node_ip_list:
+                    msg = "Node %s is already enable." % node_ip
+                else:
+                    for p in self.plugins_list:
+                        if p == "stat":continue
+                        sync_dict = self.orange_sync_dict(p,node_ip=node_ip)
+                        if not sync_dict["success"]:
+                            msg = "faild to sync Node %s %s." %(node_ip,p)
+                            return self.json_response(False, msg=msg)
+                    self.all_nodes_qset.filter(ip=node_ip).update(enable=1)
+                    msg = "succeed to enable Node %s." %node_ip
             else:
                 self.all_nodes_qset.filter(ip=node_ip).update(enable=0)
                 msg = "succeed to disable Node %s." % node_ip
@@ -56,8 +68,22 @@ class stat(Baseview):
         msg = "node %s is not exist!" %nd
         return self.json_response(False, msg=msg)
 
-
-
+class node_sync(Baseview):
+    """更新指定节点的所有插件"""
+    def post(self,request):
+        node_ip = request.POST.get('node')
+        try:
+            for p in self.plugins_list:
+                if p == "stat":continue
+                sync_dict = self.orange_sync_dict(p,node_ip=node_ip)
+                if not sync_dict["success"]:
+                    msg = "faild to sync Node %s %s." %(node_ip,p)
+                    return self.json_response(False, msg=msg)
+            msg = "succeed to sync Node %s." %(node_ip)
+            return self.json_response(True, msg=msg)
+        except:
+            msg = "faild to sync Node %s." % node_ip
+            return self.json_response(False, msg=msg)
 
 
 

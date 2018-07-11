@@ -1,0 +1,13 @@
+# cache
+__pycache__/
+
+# migrations
+migrations/
+
+# uwsgi
+uwsgi/uwsgi.log
+uwsgi/uwsgi.pid
+
+# log and sqlite 
+error.log
+orange.sqlite3
