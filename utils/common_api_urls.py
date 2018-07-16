@@ -17,6 +17,7 @@ def geturlpatterns(plugin,*args):
         ]
     else:
         for i in args:
-            item = re_path(r'^%s/$'%i, getattr(mod,i).as_view())
+            view_class = getattr(mod,i.replace("-","_"))
+            item = re_path(r'^%s/$'%i, view_class.as_view())
             extend_urlpatterns.append(item)
     return extend_urlpatterns

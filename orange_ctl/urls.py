@@ -4,7 +4,9 @@ from utils.baseview import Baseview
 urlpatterns = [
     path(r'status/',include('status.urls')),
     path(r'divide/',include('divide.urls')),
-    path(r'redirect/',include('redirect.urls'))
+    path(r'redirect/',include('redirect.urls')),
+    path(r'upstream/',include('upstream.urls')),
+    path(r'rewrite/',include('rewrite.urls'))
 ]
 
 def handler404(request):
