@@ -6,7 +6,8 @@ urlpatterns = [
     path(r'divide/',include('divide.urls')),
     path(r'redirect/',include('redirect.urls')),
     path(r'upstream/',include('upstream.urls')),
-    path(r'rewrite/',include('rewrite.urls'))
+    path(r'rewrite/',include('rewrite.urls')),
+    path(r'mirror/',include('mirror.urls'))
 ]
 
 def handler404(request):
