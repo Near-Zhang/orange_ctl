@@ -68,6 +68,21 @@ class stat(Baseview):
         msg = "node %s is not exist!" %nd
         return self.json_response(False, msg=msg)
 
+class clear(Baseview):
+    """清空共享字典中的所有统计数据"""
+    def post(self,request):
+        error_dict = False
+        error_node_list = []
+        for node in self.enable_nodes_qset:
+            url = self.compose_url('/stat/clear', node=node.ip)
+            dict = self.orange_post_dict(url, None)
+            if not dict['success']:
+                error_node_list.append(node.ip)
+        if error_dict:
+            self.json_response(False,error_node_list)
+        else:
+            return self.json_response(**dict)
+
 class node_sync(Baseview):
     """更新指定节点的所有插件"""
     def post(self,request):
