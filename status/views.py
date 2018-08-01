@@ -1,4 +1,5 @@
 from utils.baseview import Baseview
+import time
 
 class nodes(Baseview):
     """从sqlite查询、修改所有节点和启用节点"""
@@ -60,13 +61,32 @@ class stat(Baseview):
     """从共享字典查询指定节点的全据统计"""
     def get(self,request):
         nd = request.GET.get('node')
-        for node in self.enable_nodes_qset:
-            if nd == node.ip:
+        if nd:
+            for node in self.enable_nodes_qset:
+                if nd == node.ip:
+                    url = self.compose_url('/stat/status', node=node.ip)
+                    dict = self.orange_get_dict(url)
+                    return self.json_response(**dict)
+            msg = "node %s is not exist!" %nd
+            return self.json_response(False, msg=msg)
+        else:
+            data = {
+                "total_count":0,
+                "request_2xx":0,
+                "request_3xx":0,
+                "request_4xx":0,
+                "request_5xx":0
+            }
+            for node in self.enable_nodes_qset:
                 url = self.compose_url('/stat/status', node=node.ip)
                 dict = self.orange_get_dict(url)
-                return self.json_response(**dict)
-        msg = "node %s is not exist!" %nd
-        return self.json_response(False, msg=msg)
+                if dict['success']:
+                    for i in data:
+                        data[i] += dict["data"][i]
+                else:
+                    return self.json_response(**dict)
+            data["timestamp"] = int(time.time())
+            return self.json_response(True,data=data)
 
 class clear(Baseview):
     """清空共享字典中的所有统计数据"""
