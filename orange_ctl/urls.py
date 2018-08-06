@@ -7,7 +7,8 @@ urlpatterns = [
     path(r'redirect/',include('redirect.urls')),
     path(r'upstream/',include('upstream.urls')),
     path(r'rewrite/',include('rewrite.urls')),
-    path(r'mirror/',include('mirror.urls'))
+    path(r'mirror/',include('mirror.urls')),
+    path(r'ssl/',include('ssl.urls'))
 ]
 
 def handler404(request):

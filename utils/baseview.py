@@ -79,17 +79,18 @@ class Baseview(View):
 
     def orange_sync_dict(self,plugin,node_ip="all"):
         if node_ip == "all":
-            error_dict = False
+            error = False
             error_node_list = []
             for node in self.enable_nodes_qset:
                 url = self.compose_url('/'+plugin+'/sync', node=node.ip)
                 dict = self.orange_post_dict(url, None)
                 if not dict['success']:
+                    error = True
                     error_node_list.append(node.ip)
-            if error_dict:
+            if error:
                 return {
                     "success": False,
-                    "data":error_node_list
+                    "data":"failed_noed_list:"+str(error_node_list)
                 }
             else:
                 return dict

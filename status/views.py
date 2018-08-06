@@ -75,7 +75,14 @@ class stat(Baseview):
                 "request_2xx":0,
                 "request_3xx":0,
                 "request_4xx":0,
-                "request_5xx":0
+                "request_5xx":0,
+                "con_reading": 0,
+                "con_writing": 0,
+                "con_rw": 0,
+                "con_active": 0,
+                "con_idle": 0,
+                "traffic_read": 0,
+                "traffic_write": 0
             }
             for node in self.enable_nodes_qset:
                 url = self.compose_url('/stat/status', node=node.ip)
@@ -91,15 +98,16 @@ class stat(Baseview):
 class clear(Baseview):
     """清空共享字典中的所有统计数据"""
     def post(self,request):
-        error_dict = False
+        error = False
         error_node_list = []
         for node in self.enable_nodes_qset:
             url = self.compose_url('/stat/clear', node=node.ip)
             dict = self.orange_post_dict(url, None)
             if not dict['success']:
+                error =True
                 error_node_list.append(node.ip)
-        if error_dict:
-            self.json_response(False,error_node_list)
+        if error:
+            self.json_response(False,data="failed_noed_list:"+str(error_node_list))
         else:
             return self.json_response(**dict)
 
