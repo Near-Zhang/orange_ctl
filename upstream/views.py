@@ -57,3 +57,31 @@ class upstreams(Baseview):
             return self.json_response(**dict)
         else:
             return self.json_response(**sync_dict)
+
+class checker(Baseview):
+    _plugin = plugin
+
+    def get(self,request):
+        """获取监控检查状态"""
+        nd = request.GET.get('node')
+        upstream_name = request.GET.get('upstream_name')
+        base_url = '/upstream/checker'
+        if upstream_name: base_url = '/upstream/checker?upstream_name=%s' %upstream_name
+        if nd:
+            for node in self.enable_nodes_qset:
+                if nd == node.ip:
+                    url = self.compose_url(base_url, node=node.ip)
+                    dict = self.orange_get_dict(url)
+                    return self.json_response(**dict)
+            msg = "node %s is not exist!" % nd
+            return self.json_response(False, msg=msg)
+        else:
+            data = {}
+            for node in self.enable_nodes_qset:
+                url = self.compose_url(base_url, node=node.ip)
+                dict = self.orange_get_dict(url)
+                if dict["success"]:
+                    data[node.ip] = dict["data"]
+                else:
+                    data[node.ip] = dict["msg"]
+            return self.json_response(True, data=data)
