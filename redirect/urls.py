@@ -1,9 +1,8 @@
 import os
-from django.urls import path,re_path,include
-from utils.common_api_urls import geturlpatterns
+from orange_ctl.common_urls import get_url_patterns
 
-urlpatterns = [ ]
+urlpatterns = []
 
 plugin = os.path.dirname(os.path.abspath(__file__)).split('/')[-1]
-extend_urlpatterns = geturlpatterns(plugin)
+extend_urlpatterns = get_url_patterns(plugin)
 urlpatterns.extend(extend_urlpatterns)

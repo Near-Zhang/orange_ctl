@@ -1,75 +1,77 @@
-from utils.baseview import Baseview
+from orange_ctl.base_view import BaseView
+from orange_ctl.exceptions import *
+from .models import Nodes
 import time
 
-class nodes(Baseview):
-    """从sqlite查询、修改所有节点和启用节点"""
-    def get(self,request):
-        active = int(request.GET.get('active','0'))
-        if active:
-            nodes_info = self.enable_nodes_qset.values('ip','location')
-        else:
-            nodes_info = self.all_nodes_qset.values('ip','location','enable')
-        data = {'nodes' :list(nodes_info)}
-        return self.json_response(True, data=data)
+
+class NodesView(BaseView):
+    """
+    节点的查询和启用/禁用
+    """
+
+    def get(self, request):
+        node_obj_qs = Nodes.objects.all()
+        node_list = []
+        for node_obj in node_obj_qs:
+            node_list.append(node_obj.serialize())
+
+        return self.standard_response(node_list)
 
     def post(self,request):
-        node_ip = request.POST.get('node')
-        enable = int(request.POST.get('enable'))
         try:
-            if enable == 1:
-                node_ip_list = []
-                for n in self.enable_nodes_qset:
-                    node_ip_list.append(n.ip)
-                if node_ip in node_ip_list:
-                    msg = "Node %s is already enable." % node_ip
-                else:
-                    for p in self.plugins_list:
-                        if p == "stat":continue
-                        sync_dict = self.orange_sync_dict(p,node_ip=node_ip)
-                        if not sync_dict["success"]:
-                            msg = "faild to sync Node %s %s." %(node_ip,p)
-                            return self.json_response(False, msg=msg)
-                    self.all_nodes_qset.filter(ip=node_ip).update(enable=1)
-                    msg = "succeed to enable Node %s." %node_ip
-            else:
-                self.all_nodes_qset.filter(ip=node_ip).update(enable=0)
-                msg = "succeed to disable Node %s." % node_ip
-            return self.json_response(True, msg=msg)
-        except:
-            msg = "faild to change Node %s." % node_ip
-            return self.json_response(False, msg=msg)
+            # 参数获取
+            request_params = self.get_params_dict(request)
+            params_opts = ['ip', 'port', 'enable']
+            params_opts_dict = self.extract_opts(request_params, params_opts)
 
-class plugins(Baseview):
-    """从共享字典查询所有插件的简要状态"""
-    def get(self,request):
-        main_url = self.compose_url('/plugins')
-        main_node_dict = self.orange_get_dict(main_url)
-        for node in self.enable_nodes_qset[1:]:
-            url = self.compose_url('/plugins', node=node.ip)
-            dict = self.orange_get_dict(url)
-            if dict != main_node_dict:
-                if dict['success']:
-                    for plugin in main_node_dict['data']['plugins']:
-                        if dict['data']['plugins'][plugin] != main_node_dict['data']['plugins'][plugin]:
-                            msg = "node %s %s is not updated!" %(node.ip ,plugin)
-                            return self.json_response(False, msg=msg)
-                else:
-                    return self.json_response(**dict)
-        return self.json_response(**main_node_dict)
+            enable = params_opts_dict.pop('enable')
 
-class stat(Baseview):
-    """从共享字典查询指定节点的全据统计"""
+            # 请求同步
+            node_obj = Nodes.objects.get(**params_opts_dict)
+            if enable:
+                if node_obj.enable:
+                    return self.standard_response()
+                else:
+                    plugins_url = self.compose_orange_url('/plugins')
+                    plugins_response = self.request_orange_api('get', plugins_url)
+                    for p in plugins_response['plugins']:
+                        if p == "stat":
+                            continue
+                        sync_url = self.compose_orange_url('/'+self._plugin+'/sync',node=node_obj)
+                        self.request_orange_api('get', sync_url)
+
+            node_obj.enable = enable
+            node_obj.save()
+            return self.standard_response()
+
+        except CustomException as e:
+            return self.exception_to_response(e)
+
+
+class PluginsView(BaseView):
+    """
+    查询所有插件的简要状态
+    """
+
     def get(self,request):
-        nd = request.GET.get('node')
-        if nd:
-            for node in self.enable_nodes_qset:
-                if nd == node.ip:
-                    url = self.compose_url('/stat/status', node=node.ip)
-                    dict = self.orange_get_dict(url)
-                    return self.json_response(**dict)
-            msg = "node %s is not exist!" %nd
-            return self.json_response(False, msg=msg)
-        else:
+        try:
+            # 请求查询
+            uri = '/plugins'
+            response = self.concurrent_query_orange(uri, 'get')
+
+            return self.standard_response(response)
+
+        except CustomException as e:
+            return self.exception_to_response(e)
+
+
+class StatView(BaseView):
+    """
+    从共享字典查询指定节点的全据统计
+    """
+
+    def get(self,request):
+        try:
             data = {
                 "total_count":0,
                 "request_2xx":0,
@@ -84,49 +86,46 @@ class stat(Baseview):
                 "traffic_read": 0,
                 "traffic_write": 0
             }
-            for node in self.enable_nodes_qset:
-                url = self.compose_url('/stat/status', node=node.ip)
-                dict = self.orange_get_dict(url)
-                if dict['success']:
-                    for i in data:
-                        data[i] += dict["data"][i]
-                else:
-                    return self.json_response(**dict)
-            data["timestamp"] = int(time.time())
-            return self.json_response(True,data=data)
 
-class clear(Baseview):
-    """清空共享字典中的所有统计数据"""
-    def post(self,request):
-        error = False
-        error_node_list = []
-        for node in self.enable_nodes_qset:
-            url = self.compose_url('/stat/clear', node=node.ip)
-            dict = self.orange_post_dict(url, None)
-            if not dict['success']:
-                error =True
-                error_node_list.append(node.ip)
-        if error:
-            self.json_response(False,data="failed_noed_list:"+str(error_node_list))
-        else:
-            return self.json_response(**dict)
+            node_obj_qs = Nodes.objects.all()
+            for node_obj in node_obj_qs:
+                url = self.compose_orange_url('/stat/status', node=node_obj)
+                response = self.request_orange_api('get', url)
+                for k in data:
+                    data[k] += response["data"][k]
+                data["timestamp"] = int(time.time())
+                return self.standard_response(data)
 
-class node_sync(Baseview):
-    """更新指定节点的所有插件"""
+        except CustomException as e:
+            return self.exception_to_response(e)
+
+
+class NodeSyncView(BaseView):
+    """
+    更新指定节点的所有插件
+    """
+
     def post(self,request):
-        node_ip = request.POST.get('node')
         try:
-            for p in self.plugins_list:
-                if p == "stat":continue
-                sync_dict = self.orange_sync_dict(p,node_ip=node_ip)
-                if not sync_dict["success"]:
-                    msg = "faild to sync Node %s %s." %(node_ip,p)
-                    return self.json_response(False, msg=msg)
-            msg = "succeed to sync Node %s." %(node_ip)
-            return self.json_response(True, msg=msg)
-        except:
-            msg = "faild to sync Node %s." % node_ip
-            return self.json_response(False, msg=msg)
+            # 参数获取
+            request_params = self.get_params_dict(request)
+            params_opts = ['ip', 'port']
+            params_opts_dict = self.extract_opts(request_params, params_opts)
+
+            # 请求同步
+            node_obj = Nodes.objects.get(**params_opts_dict)
+            plugins_url = self.compose_orange_url('/plugins')
+            plugins_response = self.request_orange_api('get', plugins_url)
+            for p in plugins_response['plugins']:
+                if p == "stat":
+                    continue
+                sync_url = self.compose_orange_url('/' + self._plugin + '/sync', node=node_obj)
+                self.request_orange_api('get', sync_url)
+
+            return self.standard_response()
+
+        except CustomException as e:
+            return self.exception_to_response(e)
 
 
 

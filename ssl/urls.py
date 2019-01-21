@@ -1,12 +1,12 @@
 import os
-from .views import *
-from django.urls import path,re_path,include
-from utils.common_api_urls import geturlpatterns
+from django.urls import path
+from orange_ctl.common_urls import get_url_patterns
+from .views import CertsView
 
 urlpatterns = [
-    re_path( r'^certs/$',certs.as_view())
-    ]
+    path( r'certs/',CertsView.as_view())
+]
 
 plugin = os.path.dirname(os.path.abspath(__file__)).split('/')[-1]
-extend_urlpatterns = geturlpatterns(plugin,'enable','sync','config','fetch-config')
+extend_urlpatterns = get_url_patterns(plugin, part=True)
 urlpatterns.extend(extend_urlpatterns)

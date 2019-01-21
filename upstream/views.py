@@ -1,87 +1,118 @@
 import os
-from utils.common_api_views import *
+from orange_ctl.common_views import *
+from orange_ctl.base_view import BaseView
+from status.models import Nodes
 
+# 获取 app 名，即插件名
 plugin = os.path.dirname(os.path.abspath(__file__)).split('/')[-1]
 
-class enable(Base_enable):
-    _plugin = plugin
 
-class config(Base_config):
-    _plugin = plugin
+class EnableView(BaseEnableView):
+    @property
+    def _plugin(self):
+        return plugin
 
-class fetch_config(Base_fetch_config):
-    _plugin = plugin
 
-class sync(Base_sync):
-    _plugin = plugin
+class ConfigView(BaseConfigView):
+    @property
+    def _plugin(self):
+        return plugin
 
-class upstreams(Baseview):
-    _plugin = plugin
 
-    def get(self,request):
-        """获取共享字典中的配置"""
-        main_url = self.compose_url('/upstream/upstreams')
-        main_node_dict = self.orange_get_dict(main_url)
-        for node in self.enable_nodes_qset[1:]:
-            url = self.compose_url('/upstream/upstreams', node=node.ip)
-            dict = self.orange_get_dict(url)
-            if dict != main_node_dict:
-                if dict['success']:
-                    msg = "Node %s %s is not updated!" % (node.ip, self._plugin)
-                    return self.json_response(False, msg=msg)
-                else:
-                    return self.json_response(**dict)
-        return self.json_response(**main_node_dict)
+class FetchConfigView(BaseFetchConfigView):
+    @property
+    def _plugin(self):
+        return plugin
+
+
+class SyncView(BaseSyncView):
+    @property
+    def _plugin(self):
+        return plugin
+
+
+class UpstreamsView(BaseView):
+    """
+    上游的增删改查
+    """
+    @property
+    def _plugin(self):
+        return plugin
+
+    def get(self, request):
+        try:
+            # 请求查询
+            uri = '/' + self._plugin + '/upstreams'
+            response = self.concurrent_query_orange(uri, 'get')
+
+            return self.standard_response(response)
+
+        except CustomException as e:
+            return self.exception_to_response(e)
 
     def post(self,request):
-        action = request.POST.get('action')
-        if action == 'create':
-            data_item = ['upstream']
-            handler = self.orange_post_dict
-        elif action == 'delete':
-            data_item = ['upstream_name']
-            handler = self.orange_delete_dict
-        elif action == 'update':
-            data_item = ['upstream']
-            handler = self.orange_put_dict
-        else:
-            msg = "The action %s is not avaliable! " %action
-            return self.json_response(False, msg=msg)
-        data = {}
-        for k in data_item:
-            data[k] = request.POST.get(k)
-        url = self.compose_url('/upstream/upstreams')
-        dict = handler(url, data)
-        sync_dict = self.orange_sync_dict(self._plugin)
-        if sync_dict['success']:
-            return self.json_response(**dict)
-        else:
-            return self.json_response(**sync_dict)
+        try:
+            request_params = self.get_params_dict(request)
+            action_opts = ['action']
+            action_opts_dict = self.extract_opts(request_params, action_opts)
 
-class checker(Baseview):
-    _plugin = plugin
+            action = action_opts_dict['action']
+            if action == 'create':
+                method = 'post'
+                opts = ['upstream']
+            elif action == 'update':
+                method = 'put'
+                opts = ['upstream']
+            elif action == 'delete':
+                method = 'delete'
+                opts = ['upstream_name']
+            else:
+                raise RequestParamsError(opt='action', invalid=True)
+
+            opts_dict = self.extract_opts(request_params, opts)
+            url = self.compose_orange_url('/' + self._plugin + '/upstreams')
+            response = self.request_orange_api(method, url, data=opts_dict)
+
+            # 请求同步
+            self.concurrent_sync_orange()
+
+            return self.standard_response(response)
+
+        except CustomException as e:
+            return self.exception_to_response(e)
+
+
+class CheckerView(BaseView):
+    """
+    检查器状态查询
+    """
+    @property
+    def _plugin(self):
+        return plugin
 
     def get(self,request):
-        """获取监控检查状态"""
-        nd = request.GET.get('node')
-        upstream_name = request.GET.get('upstream_name')
-        base_url = '/upstream/checker'
-        if upstream_name: base_url = '/upstream/checker?upstream_name=%s' %upstream_name
-        if nd:
-            for node in self.enable_nodes_qset:
-                if nd == node.ip:
-                    url = self.compose_url(base_url, node=node.ip)
-                    dict = self.orange_get_dict(url)
-                    return self.json_response(**dict)
-            msg = "node %s is not exist!" % nd
-            return self.json_response(False, msg=msg)
-        else:
-            data = {}
-            for node in self.enable_nodes_qset:
-                url = self.compose_url(base_url, node=node.ip)
-                dict = self.orange_get_dict(url)
-                if dict["success"]:
-                    data[node.ip] = dict["data"]
-                else:
-                    data[node.ip] = dict["msg"]
-            return self.json_response(True, data=data)
+        try:
+            request_params = self.get_params_dict(request, nullable=True)
+            params_opts = ['upstream_name']
+            params_opts_dict = self.extract_opts(request_params, params_opts, necessary=False)
+
+            nd = request.GET.get('node')
+            node_obj_qs = Nodes.objects.all()
+            if nd:
+                for node in node_obj_qs:
+                    if nd == node.ip:
+                        url = self.compose_orange_url('/upstream/checker', node=node)
+                        response = self.request_orange_api('get', url, data=params_opts_dict)
+                        return self.standard_response(response)
+                msg = "node %s is not exist!" % nd
+                return self.standard_response(code=404, message=msg)
+            else:
+                data = {}
+                for node in node_obj_qs:
+                    url = self.compose_orange_url('/upstream/checker', node=node)
+                    response = self.request_orange_api('get', url, data=params_opts_dict)
+                    data[node.ip] = response.get('data')
+                return self.standard_response(data)
+
+        except CustomException as e:
+            return self.exception_to_response(e)

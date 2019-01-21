@@ -1,5 +1,6 @@
-from django.urls import path,re_path,include
-from utils.baseview import Baseview
+from django.urls import path, include
+from .base_view import BaseView
+from .exceptions import *
 
 urlpatterns = [
     path(r'status/',include('status.urls')),
@@ -11,14 +12,16 @@ urlpatterns = [
     path(r'ssl/',include('ssl.urls'))
 ]
 
+
 def handler404(request):
-    msg = "404:not found"
-    res = Baseview.json_response(Baseview,False,msg=msg)
-    res.status_code = 404
-    return res
+    try:
+        raise PageNotFind
+    except CustomException as e:
+        BaseView().exception_to_response(e)
+
 
 def handler500(request):
-    msg = "500:server error"
-    res = Baseview.json_response(Baseview,False, msg=msg)
-    res.status_code = 500
-    return res
+    try:
+        raise InternalError
+    except CustomException as e:
+        BaseView().exception_to_response(e)

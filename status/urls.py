@@ -1,12 +1,11 @@
-from django.urls import path,re_path,include
+from django.urls import path
 from .views import *
 
 urlpatterns = [
-    re_path(r'^nodes/$',nodes.as_view()),
-    re_path(r'^stat/$',stat.as_view()),
-    re_path(r'^clear/$',clear.as_view()),
-    re_path(r'plugins/$',plugins.as_view()),
-    re_path(r'node-sync/$',node_sync.as_view()),
+    path(r'nodes/', NodesView.as_view()),
+    path(r'stat/', StatView.as_view()),
+    path(r'plugins/', PluginsView.as_view()),
+    path(r'node-sync/', NodeSyncView.as_view()),
 ]
 
 

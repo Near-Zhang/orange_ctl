@@ -10,4 +10,5 @@ uwsgi/uwsgi.pid
 
 # log and sqlite 
 error.log
+nohup.out
 orange.sqlite3

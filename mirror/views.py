@@ -1,29 +1,53 @@
 import os
-from utils.common_api_views import *
+from orange_ctl.common_views import *
 
+# 获取 app 名，即插件名
 plugin = os.path.dirname(os.path.abspath(__file__)).split('/')[-1]
 
-class enable(Base_enable):
-    _plugin = plugin
 
-class config(Base_config):
-    _plugin = plugin
+class EnableView(BaseEnableView):
+    @property
+    def _plugin(self):
+        return plugin
 
-class fetch_config(Base_fetch_config):
-    _plugin = plugin
 
-class sync(Base_sync):
-    _plugin = plugin
+class ConfigView(BaseConfigView):
+    @property
+    def _plugin(self):
+        return plugin
 
-class selectors(Base_selectors):
-    _plugin = plugin
 
-class selectors_order(Base_selectors_order):
-    _plugin = plugin
+class FetchConfigView(BaseFetchConfigView):
+    @property
+    def _plugin(self):
+        return plugin
 
-class rules(Base_rules):
-    _plugin = plugin
 
-class rules_order(Base_rules_order):
-    _plugin = plugin
+class SyncView(BaseSyncView):
+    @property
+    def _plugin(self):
+        return plugin
 
+
+class SelectorsView(BaseSelectorsView):
+    @property
+    def _plugin(self):
+        return plugin
+
+
+class SelectorsOrderView(BaseSelectorsOrderView):
+    @property
+    def _plugin(self):
+        return plugin
+
+
+class RulesView(BaseRulesView):
+    @property
+    def _plugin(self):
+        return plugin
+
+
+class RulesOrderView(BaseRulesOrder):
+    @property
+    def _plugin(self):
+        return plugin
