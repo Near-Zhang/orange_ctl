@@ -193,7 +193,7 @@ class BaseRulesView(BaseView):
 
             opts_dict = self.extract_opts(request_params, opts)
             selector_id = opts_dict.pop('selector_id')
-            url = self.compose_orange_url('/'+self._plugin+'/selectors/'+selector_id+'/rules')
+            url = self.compose_orange_url('/' + self._plugin + '/selectors/' + selector_id +'/rules')
             response = self.request_orange_api(method, url, data=opts_dict)
 
             # 请求同步

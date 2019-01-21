@@ -25,8 +25,14 @@ class BaseView(View):
         :param message: str, 错误信息
         :return: JsonResponse object, json 响应对象
         """
+        # 兼容当前的前端
+        if code == 200:
+            success = True
+        else:
+            success = False
+
         res_dict = {
-            'code': code,
+            'success': success,
             'data': data,
             'message': message
         }
