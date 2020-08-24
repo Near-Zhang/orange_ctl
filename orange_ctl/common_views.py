@@ -140,7 +140,7 @@ class BaseSelectorsOrderView(BaseView):
             params_opts_dict = self.extract_opts(request_params, params_opts)
             url = self.compose_orange_url('/' + self._plugin + '/selectors/order')
 
-            response = self.request_orange_api('post', url, data=params_opts_dict)
+            response = self.request_orange_api('put', url, data=params_opts_dict)
 
             # 请求同步
             self.concurrent_sync_orange()
@@ -220,7 +220,7 @@ class BaseRulesOrder(BaseView):
             selector_id = params_opts_dict.pop('selector_id')
             url = self.compose_orange_url('/' + self._plugin + '/selectors/' + selector_id + '/rules/order')
 
-            response = self.request_orange_api('post', url, data=params_opts_dict)
+            response = self.request_orange_api('put', url, data=params_opts_dict)
 
             # 请求同步
             self.concurrent_sync_orange()
